@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>주말 날씨</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+ *{box-sizing:border-box;margin:0;padding:0}
+ html,body{height:100vh;overflow:hidden;font-family:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+ .row{display:flex;height:100vh;width:100vw}
+ .col{flex:1;height:100vh;display:flex;flex-direction:column;position:relative;min-width:0}
+ .col.sat{background:#eff6ff} .col.sun{background:#fff7ed;border-left:3px solid #fff}
+ .dayhead{flex-shrink:0;text-align:center;padding:14px 10px 10px}
+ .dayhead .d{font-size:30px;font-weight:900;letter-spacing:-1px}
+ .col.sat .d{color:#1d4ed8} .col.sun .d{color:#c2410c}
+ .dayhead .leg{font-size:13px;font-weight:800;color:#475569;margin-top:2px}
+ .mapwrap{flex:1;position:relative;min-height:0}
+ .lmap{position:absolute;inset:0}
+ .wx{display:inline-block;width:120px;transform:translate(-50%,-50%);background:rgba(255,255,255,.97);border:1.5px solid #cbd5e1;border-radius:12px;padding:6px 10px;text-align:left;box-shadow:0 3px 9px rgba(0,0,0,.25);white-space:nowrap;line-height:1.1}
+ .wx.rain{background:#dbeafe;border-color:#2563eb;box-shadow:0 3px 12px rgba(37,99,235,.3)}
+ .wx .rn{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px;text-align:center}
+ .wx .ln{display:flex;align-items:center;gap:5px;justify-content:flex-start}
+ .wx .ln .lab{font-size:10px;font-weight:800;color:#94a3b8;width:22px;text-align:left}
+ .wx .ln .ic{font-size:24px;line-height:1.2}
+ .wx .ln .pp{font-size:10px;font-weight:800;color:#1d4ed8;min-width:30px;text-align:right;margin-left:auto}
+ .back{position:fixed;top:10px;left:10px;z-index:1000;background:rgba(255,255,255,.95);border:1px solid #cbd5e1;border-radius:9px;padding:6px 11px;font-size:12px;font-weight:800;color:#475569;text-decoration:none}
+ .src{position:fixed;bottom:6px;right:8px;z-index:1000;font-size:10px;color:#94a3b8;background:rgba(255,255,255,.8);padding:1px 6px;border-radius:5px}
+ @media(max-width:760px){.row{flex-direction:column;height:auto}.col{height:100vh}}
+</style></head>
+<body>
+<div class="row">
+ <div class="col sat"><div class="dayhead"><div class="d" id="dSat"></div><div class="leg">🌅 오전 · 🌇 오후 (지역별)</div></div><div class="mapwrap"><div class="lmap" id="map_sat"></div></div></div>
+ <div class="col sun"><div class="dayhead"><div class="d" id="dSun"></div><div class="leg">🌅 오전 · 🌇 오후 (지역별)</div></div><div class="mapwrap"><div class="lmap" id="map_sun"></div></div></div>
+</div>
+<div class="src">날씨 Open-Meteo · 지도 © OpenStreetMap·CARTO</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var W={"sun_l": "6-21(일)", "regs": [{"n": "서울", "la": 37.5665, "lo": 126.978, "sat_am": {"c": 65, "t": 21, "p": 88}, "sat_pm": {"c": 53, "t": 22, "p": 80}, "sun_am": {"c": 3, "t": 23, "p": 0}, "sun_pm": {"c": 1, "t": 28, "p": 12}}, {"n": "인천", "la": 37.4563, "lo": 126.7052, "sat_am": {"c": 63, "t": 21, "p": 84}, "sat_pm": {"c": 51, "t": 21, "p": 78}, "sun_am": {"c": 3, "t": 24, "p": 0}, "sun_pm": {"c": 51, "t": 29, "p": 16}}, {"n": "수원", "la": 37.2636, "lo": 127.0286, "sat_am": {"c": 63, "t": 20, "p": 92}, "sat_pm": {"c": 51, "t": 22, "p": 82}, "sun_am": {"c": 3, "t": 23, "p": 2}, "sun_pm": {"c": 3, "t": 28, "p": 14}}, {"n": "춘천", "la": 37.8813, "lo": 127.7298, "sat_am": {"c": 65, "t": 21, "p": 88}, "sat_pm": {"c": 65, "t": 21, "p": 90}, "sun_am": {"c": 3, "t": 23, "p": 0}, "sun_pm": {"c": 1, "t": 27, "p": 8}}, {"n": "강릉", "la": 37.7519, "lo": 128.8761, "sat_am": {"c": 63, "t": 21, "p": 100}, "sat_pm": {"c": 61, "t": 22, "p": 98}, "sun_am": {"c": 51, "t": 20, "p": 84}, "sun_pm": {"c": 51, "t": 21, "p": 65}}, {"n": "대전", "la": 36.3504, "lo": 127.3845, "sat_am": {"c": 2, "t": 22, "p": 100}, "sat_pm": {"c": 2, "t": 23, "p": 82}, "sun_am": {"c": 1, "t": 24, "p": 2}, "sun_pm": {"c": 1, "t": 29, "p": 8}}, {"n": "청주", "la": 36.6424, "lo": 127.489, "sat_am": {"c": 3, "t": 22, "p": 98}, "sat_pm": {"c": 51, "t": 22, "p": 78}, "sun_am": {"c": 3, "t": 23, "p": 0}, "sun_pm": {"c": 51, "t": 28, "p": 6}}, {"n": "전주", "la": 35.8242, "lo": 127.148, "sat_am": {"c": 1, "t": 24, "p": 100}, "sat_pm": {"c": 2, "t": 24, "p": 86}, "sun_am": {"c": 0, "t": 25, "p": 6}, "sun_pm": {"c": 3, "t": 30, "p": 10}}, {"n": "광주", "la": 35.1595, "lo": 126.8526, "sat_am": {"c": 2, "t": 24, "p": 98}, "sat_pm": {"c": 2, "t": 24, "p": 61}, "sun_am": {"c": 1, "t": 25, "p": 8}, "sun_pm": {"c": 51, "t": 28, "p": 24}}, {"n": "대구", "la": 35.8714, "lo": 128.6014, "sat_am": {"c": 51, "t": 20, "p": 100}, "sat_pm": {"c": 1, "t": 29, "p": 71}, "sun_am": {"c": 1, "t": 24, "p": 2}, "sun_pm": {"c": 3, "t": 28, "p": 14}}, {"n": "부산", "la": 35.1796, "lo": 129.0756, "sat_am": {"c": 63, "t": 23, "p": 100}, "sat_pm": {"c": 0, "t": 26, "p": 76}, "sun_am": {"c": 0, "t": 24, "p": 2}, "sun_pm": {"c": 1, "t": 28, "p": 18}}, {"n": "울산", "la": 35.5384, "lo": 129.3114, "sat_am": {"c": 65, "t": 21, "p": 100}, "sat_pm": {"c": 0, "t": 28, "p": 82}, "sun_am": {"c": 2, "t": 24, "p": 0}, "sun_pm": {"c": 2, "t": 27, "p": 20}}, {"n": "제주", "la": 33.4996, "lo": 126.5312, "sat_am": {"c": 2, "t": 24, "p": 98}, "sat_pm": {"c": 2, "t": 23, "p": 78}, "sun_am": {"c": 0, "t": 25, "p": 22}, "sun_pm": {"c": 3, "t": 28, "p": 4}}], "sat": "2026-06-20", "sun": "2026-06-21", "sat_l": "6-20(토)"};
+document.getElementById('dSat').textContent='🌤 '+W.sat_l.replace(/-/g,'/');
+document.getElementById('dSun').textContent='🌤 '+W.sun_l.replace(/-/g,'/');
+function ic(c){if(c<0)return '·';if(c===0)return '☀️';if(c<=2)return '🌤️';if(c===3)return '☁️';if(c===45||c===48)return '🌫️';if(c>=51&&c<=67)return '🌧️';if(c>=71&&c<=77)return '🌨️';if(c>=80&&c<=82)return '🌧️';if(c>=85&&c<=86)return '🌨️';if(c>=95)return '⛈️';return '☁️';}
+function rainy(c){return (c>=51&&c<=67)||(c>=80&&c<=82)||(c>=95);}
+function line(lab,o){var pp=o.p>=40?('<span class="pp">'+o.p+'%</span>'):'';return '<div class="ln"><span class="lab">'+lab+'</span><span class="ic">'+ic(o.c)+'</span>'+pp+'</div>';}
+function mkMap(id){
+ var m=L.map(id,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false});
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(m);
+ m.fitBounds(L.latLngBounds([[33.0,125.6],[38.75,130.05]]),{padding:[6,6]});
+ return m;
+}
+var OFF={'서울':[0.05,-0.88],'대전':[0.10,-1.08],'전주':[-0.17,-0.90],'광주':[-0.41,-0.55],'춘천':[0.47,0.05],'강릉':[0.20,0.67],'대구':[0.08,0.95],'부산':[-0.38,0.57],'제주':[-0.22,0.02]};
+function fill(m,amk,pmk){
+ W.regs.forEach(function(r){
+  var o=OFF[r.n]; if(!o)return;
+  var clat=r.la+o[0],clon=r.lo+o[1];
+  L.polyline([[r.la,r.lo],[clat,clon]],{color:'#64748b',weight:1.2,opacity:.65,dashArray:'3 4'}).addTo(m);
+  L.circleMarker([r.la,r.lo],{radius:4,color:'#fff',weight:1.5,fillColor:'#334155',fillOpacity:1}).addTo(m);
+  var rc=(rainy(r[amk].c)||rainy(r[pmk].c))?' rain':'';
+  var html='<div class="wx'+rc+'"><div class="rn">'+r.n+'</div>'+line('오전',r[amk])+line('오후',r[pmk])+'</div>';
+  L.marker([clat,clon],{icon:L.divIcon({className:'',html:html})}).addTo(m);
+ });
+}
+var ms=mkMap('map_sat'); fill(ms,'sat_am','sat_pm');
+var mu=mkMap('map_sun'); fill(mu,'sun_am','sun_pm');
+setTimeout(function(){ms.invalidateSize();mu.invalidateSize();ms.fitBounds(L.latLngBounds([[33.0,125.6],[38.75,130.05]]),{padding:[6,6]});mu.fitBounds(L.latLngBounds([[33.0,125.6],[38.75,130.05]]),{padding:[6,6]});},300);
+</script>
+</body></html>
